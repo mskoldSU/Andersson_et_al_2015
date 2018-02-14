@@ -1,0 +1,29 @@
+model
+{
+# Likelihood
+for (i in 1:n){
+	d13C[i] ~ dnorm(m13, tau13)
+	D14C[i] ~ dnorm(m14, tau14)
+}
+# Priors
+	p[1:3] ~ ddirch(c(1,1,1))
+	m13 <- A13 * p[1] + B13 * p[2] + C13 * p[3]
+	tau13 <- 1 / (p[1]^2 * vA13 + p[2]^2 * vB13 + p[3]^2 * vC13)
+## Endmember pars
+# d13C means
+	A13 <- -26.72
+	B13 <- -23.38
+	C13 <- -25.47
+# d13C variances
+	vA13 <- 3.31
+	vB13 <- 1.72
+	vC13 <- 1.72
+	m14 <- A14 * p[1] + B14 * p[2] + C14 * p[3]
+	tau14 <- 1 / (p[1]^2 * vA14)
+# D14C means
+	A14 <-  112
+	B14 <- -1000
+	C14 <- -1000
+# D14C variance
+	vA14 <- 3600
+}

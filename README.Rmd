@@ -1,0 +1,62 @@
+---
+title: Regionally-varying combustion sources of the January 2013 severe haze events
+  over eastern China - Bayesian computations
+output: github_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
+```
+
+This repository reproduces the analysis behind the Bayesian sourse apportionment analysis in ["Regionally-varying combustion sources of the January 2013 severe haze events over eastern China", *Environmental science & technology 49 (4), 2038-2043.*](https://pubs.acs.org/doi/abs/10.1021/es503855e). For more details, consult the article and its suplementary material.
+
+```{r}
+library(tidyverse)
+library(rjags)
+
+run_jags <- function(data, model_file = "model.jags"){
+    # Takes data from a site, runs RJAGS on model_file 
+    # and returns draws from posterior proportions in 
+    # long format
+    jags_data <- list(n = nrow(data), d13C = data$d13C, D14C = data$D14C)
+    model <- jags.model(file = model_file,
+                        data = jags_data, 
+                        n.chains = 1, 
+                        n.adapt = 10000,
+                        quiet = TRUE)
+    update(model, 1000)
+    coda.samples(model, variable.names = "p", 
+                 n.iter = 5000000,
+                 thin = 100) %>% 
+        as.matrix() %>% 
+        as.tibble() %>% 
+        rename(`C3 plants` = `p[1]`, 
+               `liquid fossil` = `p[2]`, 
+               `coal` = `p[3]`) %>% 
+        gather() %>% 
+        mutate(Site = data$Site[1])
+}
+
+# Reads data from Table S2
+data <- read_delim("isotope_data.csv", delim = ";") %>% 
+    na.omit()
+
+# Splits data according to Site, runs run_jags fro each
+# site and plot posterior densities corresponding to Figure S10
+split(data, data$Site) %>% 
+    map(run_jags) %>% 
+    map_df(bind_rows) %>% 
+    ggplot(aes(x = value, fill = Site, color = Site), size = 1) + 
+    geom_density(alpha = .1) +
+    facet_wrap(~key, nrow = 3, scales = "free_y") +
+    xlab("relative source contribution") +
+    ylab("posterior density") +
+    scale_x_continuous(expand = c(0, 0), limits = c(0, 1)) + 
+    theme_bw()
+```
+
+
+```{r}
+sessionInfo()
+```
+
